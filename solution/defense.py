@@ -78,14 +78,15 @@ def check_lineage_run(payload, ctx):
     actual_downstream_count = graph.get("actual_downstream_count")
     upstream_count = len(actual_upstream) if hasattr(actual_upstream, "__len__") else 0
 
-    if duration_ms is not None and duration_ms > _baseline(ctx, "lineage_duration_ms_max"):
+    duration_threshold = _baseline(ctx, "lineage_duration_ms_max")
+    if duration_threshold is not None:
+        duration_threshold *= 0.95
+    if duration_ms is not None and duration_threshold is not None and duration_ms > duration_threshold:
         return Verdict(alert=True, pillar="lineage", reason="runtime_anomaly")
     if not actual_upstream:
         return Verdict(alert=True, pillar="lineage", reason="missing_upstream")
-    if actual_downstream_count is not None and actual_downstream_count <= 0:
+    if actual_downstream_count is not None and actual_downstream_count <= 1:
         return Verdict(alert=True, pillar="lineage", reason="orphaned_output")
-    if actual_downstream_count is not None and upstream_count and upstream_count * 2 < actual_downstream_count:
-        return Verdict(alert=True, pillar="lineage", reason="missing_upstream")
     if actual_downstream_count is not None and upstream_count >= 3 and actual_downstream_count == 1:
         return Verdict(alert=True, pillar="lineage", reason="orphaned_output")
 
